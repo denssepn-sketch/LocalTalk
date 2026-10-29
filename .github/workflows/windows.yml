@@ -1,0 +1,21 @@
+name: Build Windows
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Copiar index.html
+        run: Copy-Item index.html windows/index.html
+      - name: Construir EXE
+        working-directory: windows
+        run: |
+          npm install
+          npx electron-builder --win --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TalkLocal-windows
+          path: windows/dist/TalkLocal.exe
