@@ -14,15 +14,65 @@ jobs:
           gradle-version: 8.7
       - name: Montar projeto
         run: |
-          mkdir -p proj/app/src/main/java/br/com/localtalk proj/app/src/main/assets
+          mkdir -p proj/app/src/main/java/br/com/localtalk
+          mkdir -p proj/app/src/main/assets
           cp AndroidManifest.xml proj/app/src/main/
           cp MainActivity.java proj/app/src/main/java/br/com/localtalk/
           cp index.html proj/app/src/main/assets/
           RES=proj/app/src/main/res
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p $RES/mipmap-$d; cp ic_launcher.png $RES/mipmap-$d/ic_launcher.png; done
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p $RES/mipmap-$d
+            cp ic_launcher.png $RES/mipmap-$d/ic_launcher.png
+          done
           mkdir -p $RES/mipmap-anydpi-v26 $RES/drawable-nodpi $RES/values
           cp ic_foreground.png $RES/drawable-nodpi/ic_foreground.png
-          echo '<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/ic_bg"/><foreground android:drawable="@drawable/ic_foreground"/></adaptive-icon>' > $RES/mipmap-anydpi-v26/ic_launcher.xml
-          echo '<?xml version="1.0" encoding="utf-8"?><resources><color name="ic_bg">#030A3C</color></resources>' > $RES/values/colors.xml
-          cd proj
-          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" >
+          cat > $RES/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@color/ic_bg"/>
+            <foreground android:drawable="@drawable/ic_foreground"/>
+          </adaptive-icon>
+          EOF
+          cat > $RES/values/colors.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <color name="ic_bg">#030A3C</color>
+          </resources>
+          EOF
+          cat > proj/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "LocalTalk"
+          include ':app'
+          EOF
+          cat > proj/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          EOF
+          cat > proj/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g
+          EOF
+          cat > proj/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'br.com.localtalk'
+            compileSdk 34
+            defaultConfig {
+              applicationId 'br.com.localtalk'
+              minSdk 21
+              targetSdk 34
+              versionCode 1
+              versionName '1.0'
+            }
+            compileOptions {
+              sourceCompatibility JavaVersion.VERSION_17
+              targetCompatibility JavaVersion.VERSION_17
+            }
+          }
+          EOF
+      - name: Construir APK
+        working-directory: proj
+        run: gradle assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TalkLocal-apk
+          path: proj/app/build/outputs/apk/debug/app-debug.apk
