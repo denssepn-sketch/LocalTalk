@@ -18,19 +18,11 @@ jobs:
           cp AndroidManifest.xml proj/app/src/main/
           cp MainActivity.java proj/app/src/main/java/br/com/localtalk/
           cp index.html proj/app/src/main/assets/
+          RES=proj/app/src/main/res
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do mkdir -p $RES/mipmap-$d; cp ic_launcher.png $RES/mipmap-$d/ic_launcher.png; done
+          mkdir -p $RES/mipmap-anydpi-v26 $RES/drawable-nodpi $RES/values
+          cp ic_foreground.png $RES/drawable-nodpi/ic_foreground.png
+          echo '<?xml version="1.0" encoding="utf-8"?><adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/ic_bg"/><foreground android:drawable="@drawable/ic_foreground"/></adaptive-icon>' > $RES/mipmap-anydpi-v26/ic_launcher.xml
+          echo '<?xml version="1.0" encoding="utf-8"?><resources><color name="ic_bg">#030A3C</color></resources>' > $RES/values/colors.xml
           cd proj
-          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" > settings.gradle
-          echo "dependencyResolutionManagement { repositories { google(); mavenCentral() } }" >> settings.gradle
-          echo 'rootProject.name = "LocalTalk"' >> settings.gradle
-          echo "include ':app'" >> settings.gradle
-          echo "plugins { id 'com.android.application' version '8.5.2' apply false }" > build.gradle
-          echo "org.gradle.jvmargs=-Xmx2g" > gradle.properties
-          echo "plugins { id 'com.android.application' }" > app/build.gradle
-          echo "android { namespace 'br.com.localtalk'; compileSdk 34; defaultConfig { applicationId 'br.com.localtalk'; minSdk 21; targetSdk 34; versionCode 1; versionName '1.0' }; compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 } }" >> app/build.gradle
-      - name: Construir APK
-        working-directory: proj
-        run: gradle assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: LocalTalk-apk
-          path: proj/app/build/outputs/apk/debug/app-debug.apk
+          echo "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }" >
