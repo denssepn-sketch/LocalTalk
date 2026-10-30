@@ -175,6 +175,8 @@ const PF={campo:{beep:1,wake:0,bg:1,ch:'Equipes'},evento:{beep:1,wake:1,bg:1,ch:
 let pf=PF[localStorage.lt_pf]?localStorage.lt_pf:'';$('#pf').value=pf;
 function applyPf(k){const f=PF[k];pf=f?k:'';localStorage.lt_pf=pf;if(!f)return;opt.beep=f.beep;opt.wake=f.wake;opt.bg=f.bg;[['o1','beep'],['o2','wake'],['o3','bg']].forEach(([i,key])=>$('#'+i).checked=!!opt[key]);applyOpt();setCh(f.ch)}
 $('#pf').onchange=e=>applyPf(e.target.value);
+ // Botão do fone: toca uma vez para falar, toca de novo para parar
+window.ltTap=src=>{if(!mic)return;if(txOn)pttOff();else pttOn()};
  // Botão do fone/volume (o Android chama isto): toca uma vez para falar, toca de novo para parar
 window.ltTap=src=>{if(!mic)return;if(txOn)pttOff();else pttOn()};
 // ---- Mapa: posição dos aparelhos (sem internet; GPS só onde o aparelho tiver) ----
