@@ -19,6 +19,7 @@ jobs:
           cp AndroidManifest.xml proj/app/src/main/
           cp MainActivity.java proj/app/src/main/java/br/com/localtalk/
           cp index.html proj/app/src/main/assets/
+          [ -f lt-extras.js ] && cp lt-extras.js proj/app/src/main/assets/ || true
           RES=proj/app/src/main/res
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             mkdir -p $RES/mipmap-$d
