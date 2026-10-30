@@ -274,6 +274,30 @@ static void tap(String k) {
 
     private class Bridge {
                 @JavascriptInterface
+        public void saveFile(final String name, final String mime, final String b64) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String clean = name.replaceAll("[\\\\/:*?\"<>|]", "_");
+                    try {
+                        if (Build.VERSION.SDK_INT < 29) throw new IOException("Android antigo");
+                        byte[] data = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+                        ContentValues cv = new ContentValues();
+                        cv.put(MediaStore.MediaColumns.DISPLAY_NAME, clean);
+                        cv.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                        cv.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/LocalTalk");
+                        Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                        OutputStream os = getContentResolver().openOutputStream(u);
+                        os.write(data);
+                        os.close();
+                        js("window.ltSaved&&window.ltSaved(" + RoomCore.quote(clean) + ",true)");
+                    } catch (Exception e) {
+                        js("window.ltSaved&&window.ltSaved(" + RoomCore.quote(clean) + ",false)");
+                    }
+                }
+            }).start();
+        }
+                @JavascriptInterface
         public void volKeys(final boolean on) {
             volKeysOn = on;
         }
