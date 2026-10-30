@@ -255,7 +255,7 @@ static void tap(String k) {
     private void js(final String code) {
         runOnUiThread(new Runnable() {
             @Override
-            run() {
+            public void run() {
                 webView.evaluateJavascript(code, null);
             }
         });
@@ -271,7 +271,7 @@ static void tap(String k) {
             RoomCore r = new RoomCore(name, RoomCore.HTTP_PORT, RoomCore.DISCOVERY_PORT, RoomCore.TTL_MS);
             r.listener = new RoomCore.AnswerListener() {
                 @Override
-                onAnswer(String answer) {
+                public void onAnswer(String answer) {
                     js("window.ltOnAnswer&&window.ltOnAnswer(" + RoomCore.quote(answer) + ")");
                 }
             };
