@@ -164,7 +164,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{cur=b.dataset.
 function wav(){const n=8000,b=new DataView(new ArrayBuffer(44+n)),s=(o,t)=>[...t].forEach((c,i)=>b.setUint8(o+i,c.charCodeAt()));s(0,'RIFF');b.setUint32(4,36+n,true);s(8,'WAVEfmt ');b.setUint32(16,16,true);b.setUint16(20,1,true);b.setUint16(22,1,true);b.setUint32(24,8000,true);b.setUint32(28,8000,true);b.setUint16(32,1,true);b.setUint16(34,8,true);s(36,'data');b.setUint32(40,n,true);for(let i=0;i<n;i++)b.setUint8(44+i,128);return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
 const ka=new Audio();ka.loop=true;ka.src=wav();
 async function applyOpt(){localStorage.lt_opt=JSON.stringify(opt);try{if(opt.wake&&navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request('screen');wl.onrelease=()=>wl=null}else if(!opt.wake&&wl)wl.release()}catch(e){}
- if(opt.bg){ka.play().catch(()=>{});if('mediaSession'in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:'LocalTalk',artist:'Rádio ativo na rede local'})}else ka.pause();try{window.LTAndroid&&LTAndroid.keepAlive(!!opt.bg)}catch(e){}}
+ if(opt.bg&&!window.LTAndroid){ka.play().catch(()=>{});if('mediaSession'in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:'LocalTalk',artist:'Rádio ativo na rede local'})}else ka.pause();try{window.LTAndroid&&LTAndroid.keepAlive(!!opt.bg)}catch(e){}}
 document.onvisibilitychange=()=>{if(!document.hidden)applyOpt()};
 [['o1','beep'],['o2','wake'],['o3','bg']].forEach(([id,k])=>{$('#'+id).checked=!!opt[k];$('#'+id).onchange=e=>{opt[k]=e.target.checked?1:0;pf='';localStorage.lt_pf='';$('#pf').value='';applyOpt()}});
 $('#cn').onchange=e=>{NAME=e.target.value.trim()||NAME;localStorage.lt_name=NAME;all({t:'name',name:NAME});ui()};
