@@ -47,7 +47,7 @@ select{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);
 <main><div id="hd"></div>
 <section id="v-chat"><div id="chs"></div><div id="sb"><input id="q" placeholder="Pesquisar no histórico..."><button id="fv" title="Só favoritas">⭐</button></div><div id="msgs"></div><div id="bar"><button id="ptt">Segure para falar</button><button id="call" title="Chamar atenção">🔔</button><button id="sos" title="Segure 1 segundo para enviar SOS">🆘</button></div><div id="inp"><input id="tx" placeholder="Digite uma mensagem..." maxlength="500"><button id="snd" class="pri">➤</button></div></section>
 <section id="v-dev" hidden><div id="dl" style="display:flex;flex-direction:column;gap:8px"></div><button id="bi" class="pri">➕ Convidar aparelho</button><button id="bj">🔗 Entrar em uma rede (tenho um convite)</button><button id="rc" class="pri" hidden>🔢 Criar sala com código</button><button id="rj" hidden>🔢 Entrar com código</button><p id="rm" class="sm" hidden></p><p class="sm">Depois que 2 aparelhos se conectam, os demais se ligam automaticamente a todos (malha). Espaço = falar no PC.</p></section>
-<section id="v-map" hidden><label class="ck"><input type="checkbox" id="lo">Compartilhar minha localização com quem está conectado</label><p id="lh" class="sm">Desligado. Só quem está conectado a você vê a posição, e ela não é guardada. Ao fechar o app, volta a ficar desligado.</p><canvas id="cv" width="360" height="360" style="width:100%;max-width:360px;align-self:center;background:var(--p);border-radius:16px"></canvas><div id="ml" style="display:flex;flex-direction:column;gap:8px"></div></section>
+<section id="v-map" hidden><label class="ck"><input type="checkbox" id="lo">Compartilhar minha localização com quem está conectado</label><p id="lh" class="sm">Desligado. Só quem está conectado a você vê a posição, e ela não é guardada. Ao fechar o app, volta a ficar desligado.</p><canvas id="cv" width="360" height="360" style="width:100%;max-width:360px;align-self:center;background:var(--p);border-radius:16px"></canvas><div id="ml" style="display:flex;flex-direction:column;gap:8px"></div></section><label class="ck"><input type="checkbox" id="o4">Usar botões de volume (volume + = falar)</label><label>Botão volume − faz</label><select id="vd"><option value="">Nada</option><option value="mute">Silenciar/ativar todas as conversas</option><option value="call">Chamar atenção 🔔</option></select>
 <section id="v-cfg" hidden><label>Seu nome</label><input id="cn" maxlength="20"><label>Nome da sala</label><input id="rn" maxlength="30" placeholder="Ex.: Equipe Norte (só o administrador altera)"><label>Perfil de uso</label><select id="pf"><option value="">Personalizado</option><option value="campo">Equipe de campo</option><option value="evento">Evento</option><option value="familia">Família</option><option value="silencioso">Silencioso (sem bipes)</option></select><label class="ck"><input type="checkbox" id="o1">Sons (bipe de rádio e mensagens)</label><label class="ck"><input type="checkbox" id="o2">Manter tela ligada</label><label class="ck"><input type="checkbox" id="o3">Modo segundo plano (mantém o áudio ativo)</label><p class="sm">Funciona na mesma rede Wi-Fi/hotspot, com ou sem internet. O áudio vai direto entre aparelhos, criptografado (WebRTC).</p></section>
 </main></div>
 <div id="modal" hidden><div><label id="l1"></label><textarea id="c1"></textarea><label id="l2"></label><textarea id="c2"></textarea><button id="act" class="pri"></button><button id="cp1">Copiar texto de cima</button><button id="cp2">Copiar texto de baixo</button><span id="hint" class="sm"></span><button id="x">Fechar</button></div></div>
@@ -177,6 +177,18 @@ function applyPf(k){const f=PF[k];pf=f?k:'';localStorage.lt_pf=pf;if(!f)return;o
 $('#pf').onchange=e=>applyPf(e.target.value);
  // Botão do fone: toca uma vez para falar, toca de novo para parar
 window.ltTap=src=>{if(!mic)return;if(txOn)pttOff();else pttOn()};
+ let allMute=0;
+const volKeys=()=>{try{window.LTAndroid&&LTAndroid.volKeys(!!opt.vol)}catch(e){}};
+window.ltKey=src=>{
+ if(!opt.vol)return;
+ if(src=='vu'){window.ltTap('vol');return}
+ if(src=='vd'){
+  if(opt.vd=='mute'){allMute=!allMute;Object.values(peers).forEach(p=>{p.mu=allMute});ui();sys(allMute?'Todas as conversas silenciadas 🔇':'Conversas reativadas 🔊')}
+  else if(opt.vd=='call'){all({t:'call'});sys('Você chamou todos 🔔');beep(1000,.3)}
+ }};
+$('#o4').checked=!!opt.vol;$('#o4').onchange=e=>{opt.vol=e.target.checked?1:0;localStorage.lt_opt=JSON.stringify(opt);volKeys()};
+$('#vd').value=opt.vd||'';$('#vd').onchange=e=>{opt.vd=e.target.value;localStorage.lt_opt=JSON.stringify(opt)};
+volKeys();
  // Botão do fone/volume (o Android chama isto): toca uma vez para falar, toca de novo para parar
 window.ltTap=src=>{if(!mic)return;if(txOn)pttOff();else pttOn()};
 // ---- Mapa: posição dos aparelhos (sem internet; GPS só onde o aparelho tiver) ----
