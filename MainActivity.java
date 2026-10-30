@@ -383,7 +383,10 @@ static void tap(String k) {
 
         private PowerManager.WakeLock wake;
         private WifiManager.WifiLock wifi;
-        private MediaSession
+              private PowerManager.WakeLock wake;
+        private WifiManager.WifiLock wifi;
+        private MediaSession session;
+
         @Override
         public IBinder onBind(Intent intent) {
             return null;
@@ -392,9 +395,9 @@ static void tap(String k) {
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
             if (intent != null && "br.com.localtalk.PTT".equals(intent.getAction())) {
-    MainActivity.tap("hs");
-    return START_NOT_STICKY;
-}
+                MainActivity.tap("hs");
+                return START_NOT_STICKY;
+            }
             Notification n = buildNotification();
             try {
                 if (Build.VERSION.SDK_INT >= 30) {
@@ -420,57 +423,43 @@ static void tap(String k) {
         public void onDestroy() {
             stopSession();
             releaseLocks();
-            private void startSession() {
-    if (Build.VERSION.SDK_INT < 21 || session != null) return;
-    try {
-        session = new MediaSession(this, "LocalTalk");
-        session.setCallback(new MediaSession.Callback() {
-            @Override
-            public boolean onMediaButtonEvent(Intent i) {
-                KeyEvent ke = i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (ke != null && ke.getAction() == KeyEvent.ACTION_DOWN && ke.getRepeatCount() == 0) {
-                    MainActivity.tap("hs");
-                }
-                return true;
-            }
-        });
-        session.setPlaybackState(new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
-                        | PlaybackState.ACTION_PLAY_PAUSE)
-                .setState(PlaybackState.STATE_PLAYING, 0, 1f).build());
-        session.setPlaybackToRemote(new VolumeProvider(VolumeProvider.VOLUME_CONTROL_RELATIVE, 100, 50) {
-            @Override
-            public void onAdjustVolume(int direction) {
-                if (direction == 0) return;
-                MainActivity a = MainActivity.instance;
-                if (a != null && a.volKeysOn) {
-                    MainActivity.tap(direction > 0 ? "up" : "down");
-                } else {
-                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-                            direction > 0 ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER,
-                            AudioManager.FLAG_SHOW_UI);
-                }
-            }
-        });
-        session.setActive(true);
-    } catch (RuntimeException e) {
-        session = null;
-    }
-}
-
-private void stopSession() {
-    if (session != null) {
-        try {
-            session.setActive(false);
-            session.release();
-        } catch (RuntimeException e) {
-            // nada a fazer
-        }
-        session = null;
-    }
-}
             super.onDestroy();
+        }
+
+        private void startSession() {
+            if (Build.VERSION.SDK_INT < 21 || session != null) return;
+            try {
+                session = new MediaSession(this, "LocalTalk");
+                session.setCallback(new MediaSession.Callback() {
+                    @Override
+                    public boolean onMediaButtonEvent(Intent i) {
+                        KeyEvent ke = i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                        if (ke != null && ke.getAction() == KeyEvent.ACTION_DOWN
+                                && ke.getRepeatCount() == 0) {
+                            MainActivity.tap("hs");
+                        }
+                        return true;
+                    }
+                });
+                session.setPlaybackState(new PlaybackState.Builder()
+                        .setActions(PlaybackState.ACTION_PLAY_PAUSE)
+                        .setState(PlaybackState.STATE_PLAYING, 0, 1f)
+                        .build());
+                session.setActive(true);
+            } catch (RuntimeException e) {
+                session = null;
+            }
+        }
+
+        private void stopSession() {
+            if (session == null) return;
+            try {
+                session.setActive(false);
+                session.release();
+            } catch (RuntimeException e) {
+                // nada a fazer
+            }
+            session = null;
         }
 
         private Notification buildNotification() {
