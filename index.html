@@ -99,6 +99,11 @@ async function join(c){const o=await dec(c),p=mk('tmp'+rnd());p.pc.ondatachannel
 function setMode(m){md=m;$('#l2').hidden=$('#c2').hidden=$('#cp1').hidden=$('#cp2').hidden=false;$('#c1').inputMode='text';const i=m=='i';$('#modal').hidden=false;$('#l1').textContent=i?'1) Envie este convite ao outro aparelho':'1) Cole o convite recebido';$('#l2').textContent=i?'2) Cole aqui a resposta dele':'2) Envie esta resposta ao primeiro aparelho';$('#c1').readOnly=i;$('#c2').readOnly=!i;$('#c1').value=$('#c2').value='';$('#act').textContent=i?'Conectar':'Gerar resposta';$('#act').hidden=false;$('#hint').textContent='';
  if(i){$('#c1').value='Gerando…';invite().then(c=>$('#c1').value=c).catch(e=>$('#hint').textContent='Erro: '+e.message)}}
 // ---- Sala por código (precisa do módulo nativo window.LTNative; sem ele os botões ficam ocultos) ----
+// Ponte do Android: a sala por código roda no Java (MainActivity) e responde por aqui.
+if(window.LTAndroid&&window.LTAndroid.roomHost&&!window.LTNative){const pd={};let nn=0;
+ window.ltNativeDone=(id,ok,v)=>{const q=pd[id];if(!q)return;delete pd[id];if(ok){try{q.ok(JSON.parse(v))}catch(e){q.no(e)}}else q.no(new Error(v))};
+ const call=(fn,...a)=>new Promise((ok,no)=>{const id='r'+(++nn);pd[id]={ok,no};setTimeout(()=>{if(pd[id]){delete pd[id];no(new Error('o aparelho não respondeu'))}},12000);try{window.LTAndroid[fn](id,...a)}catch(e){delete pd[id];no(e)}});
+ window.LTNative={host:(n,o)=>call('roomHost',String(n),o),stop:()=>{try{window.LTAndroid.roomStop()}catch(e){}},fetchOffer:c=>call('roomFetch',c),sendAnswer:(f,c,a)=>call('roomAnswer',f.host,String(f.port),c,a)}}
 const nat=window.LTNative;let roomOn=0;
 const setRoom=t=>{$('#rm').textContent=t;$('#rm').hidden=!t};
 async function roomNew(){try{const c=await invite(),code=await nat.host(room||NAME,c);setRoom('Sala aberta · código '+code+' (vale 10 min)');return code}catch(e){roomOn=0;setRoom('');$('#rc').textContent='🔢 Criar sala com código';throw e}}
