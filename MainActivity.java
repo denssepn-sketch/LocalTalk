@@ -1,6 +1,8 @@
 package br.com.localtalk;
 import android.media.AudioManager;
 import android.media.VolumeProvider;
+import android.content.ContentValues;
+import android.provider.MediaStore;
 import android.net.Uri;
 import android.webkit.ValueCallback;
 import android.media.AudioManager;
@@ -61,6 +63,7 @@ public class MainActivity extends Activity {
     private static final int REQ_LOCATION = 2;
     private static final int REQ_FILE = 3;
     private ValueCallback<Uri[]> fileCb;
+    private Uri camUri;
     private static final String NOTIF_PERMISSION = "android.permission.POST_NOTIFICATIONS";
     private static final String APP_URL = "file:///android_asset/index.html";
 
@@ -118,32 +121,40 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             // Microfone: concede só o áudio. Câmera, MIDI e o resto são negados.
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        List<String> allowed = new ArrayList<String>();
-                        for (String r : request.getResources()) {
-                            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) {
-                                allowed.add(r);
-                            }
-                        }
-                        if (allowed.isEmpty()) {
-                            request.deny();
-                        } else {
-                            request.grant(allowed.toArray(new String[0]));
-                        }
-                    }
-                });
-            }
-            @Override
+                        @Override
             public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb,
                     FileChooserParams params) {
                 if (fileCb != null) fileCb.onReceiveValue(null);
                 fileCb = cb;
+                camUri = null;
                 try {
-                    startActivityForResult(params.createIntent(), REQ_FILE);
+                    Intent chooser = Intent.createChooser(params.createIntent(), "Escolher");
+                    boolean img = false;
+                    String[] ac = params.getAcceptTypes();
+                    if (ac == null || ac.length == 0) img = true;
+                    else for (String t : ac) {
+                        if (t == null || t.length() == 0 || t.startsWith("image")) img = true;
+                    }
+                    if (img) {
+                        try {
+                            ContentValues cv = new ContentValues();
+                            cv.put(MediaStore.Images.Media.DISPLAY_NAME,
+                                    "localtalk_" + System.currentTimeMillis() + ".jpg");
+                            cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                            camUri = getContentResolver().insert(
+                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                            if (camUri != null) {
+                                Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                cam.putExtra(MediaStore.EXTRA_OUTPUT, camUri);
+                                cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cam});
+                            }
+                        } catch (RuntimeException e) {
+                            camUri = null;
+                        }
+                    }
+                    startActivityForResult(chooser, REQ_FILE);
                 } catch (Exception e) {
                     fileCb = null;
                     return false;
@@ -394,11 +405,16 @@ static void tap(String k) {
         }
         return super.dispatchKeyEvent(e);
     }
-    @Override
+        @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == REQ_FILE && fileCb != null) {
-            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
+            Uri[] r = WebChromeClient.FileChooserParams.parseResult(res, data);
+            if (r == null && res == RESULT_OK && camUri != null
+                    && (data == null || data.getData() == null)) {
+                r = new Uri[]{camUri};
+            }
+            fileCb.onReceiveValue(r);
             fileCb = null;
         }
     }
