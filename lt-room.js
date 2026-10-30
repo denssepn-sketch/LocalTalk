@@ -15,11 +15,23 @@ const MAX_BODY = 64 * 1024;          // convite SDP comprimido cabe com folga
 
 const newCode = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 
+const isV4 = i => i.family === 'IPv4' || i.family === 4;
 function localAddrs() {
   const out = [];
   for (const list of Object.values(os.networkInterfaces()))
     for (const i of list || [])
-      if (i.family === 'IPv4' && !i.internal) out.push(i.address);
+      if (isV4(i) && !i.internal) out.push(i.address);
+  return out;
+}
+// Endereço de broadcast de cada rede (usa a máscara real, não supõe /24).
+const ip2n = ip => ip.split('.').reduce((a, b) => ((a << 8) | +b) >>> 0, 0);
+const n2ip = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+const bcastOf = (ip, mask) => n2ip((ip2n(ip) | (~ip2n(mask) >>> 0)) >>> 0);
+function broadcastTargets() {
+  const out = ['255.255.255.255'];
+  for (const list of Object.values(os.networkInterfaces()))
+    for (const i of list || [])
+      if (isV4(i) && !i.internal && i.netmask) { const b = bcastOf(i.address, i.netmask); if (!out.includes(b)) out.push(b); }
   return out;
 }
 
@@ -52,8 +64,14 @@ class Room {
   blocked(ip) { return (this.fails.get(ip) || 0) >= 5; }
   fail(ip) { this.fails.set(ip, (this.fails.get(ip) || 0) + 1); }
 
-  start() {
-    this.http = http.createServer((req, res) => this._handle(req, res));
+  async start() {
+    const tryHttp = port => new Promise((ok, no) => {
+      const sv = http.createServer((req, res) => this._handle(req, res));
+      sv.once('error', no);
+      sv.listen(port, '0.0.0.0', () => { sv.removeAllListeners('error'); sv.on('error', () => {}); ok(sv); });
+    });
+    try { this.http = await tryHttp(this.httpPort); }
+    catch (e) { if (e.code !== 'EADDRINUSE' || this.httpPort === 0) throw e; this.http = await tryHttp(0); } // porta ocupada: usa outra (vai na resposta da descoberta)
     this.udp = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     this.udp.on('message', (msg, rinfo) => {
       const m = String(msg).trim();
@@ -64,10 +82,9 @@ class Room {
       const reply = JSON.stringify({ lt: 1, name: this.name, port: this.httpPort });
       this.udp.send(reply, rinfo.port, rinfo.address);
     });
-    return Promise.all([
-      new Promise((ok, no) => { this.http.once('error', no); this.http.listen(this.httpPort, '0.0.0.0', ok); }),
-      new Promise((ok, no) => { this.udp.once('error', no); this.udp.bind(this.discoveryPort, '0.0.0.0', ok); }),
-    ]).then(() => { this.httpPort = this.http.address().port; this.discoveryPort = this.udp.address().port; return this; });
+    await new Promise((ok, no) => { this.udp.once('error', no); this.udp.bind(this.discoveryPort, '0.0.0.0', ok); });
+    this.httpPort = this.http.address().port; this.discoveryPort = this.udp.address().port;
+    return this;
   }
 
   stop() {
@@ -121,7 +138,7 @@ function discover(code, { targets, port = DISCOVERY_PORT, timeout = 2500 } = {})
     });
     s.bind(0, () => {
       s.setBroadcast(true);
-      const list = targets || ['255.255.255.255', ...localAddrs().map(a => a.replace(/\.\d+$/, '.255'))];
+      const list = targets || broadcastTargets();
       list.forEach(h => s.send('LT?' + code, port, h));
     });
   });
@@ -152,4 +169,4 @@ async function joinRoom(code, makeAnswer, opts = {}) {
   return { name: f.name, host: f.host };
 }
 
-module.exports = { Room, discover, fetchOffer, sendAnswer, joinRoom, localAddrs, newCode, HTTP_PORT, DISCOVERY_PORT };
+module.exports = { Room, discover, fetchOffer, sendAnswer, joinRoom, localAddrs, broadcastTargets, bcastOf, newCode, HTTP_PORT, DISCOVERY_PORT };
