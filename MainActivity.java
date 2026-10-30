@@ -383,8 +383,6 @@ static void tap(String k) {
 
         private PowerManager.WakeLock wake;
         private WifiManager.WifiLock wifi;
-              private PowerManager.WakeLock wake;
-        private WifiManager.WifiLock wifi;
         private MediaSession session;
 
         @Override
