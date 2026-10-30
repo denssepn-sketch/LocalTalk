@@ -1,4 +1,6 @@
 package br.com.localtalk;
+import android.net.Uri;
+import android.webkit.ValueCallback;
 import android.media.AudioManager;
 import android.media.VolumeProvider;
 import android.media.session.MediaSession;
@@ -55,6 +57,8 @@ import java.util.Map;
 public class MainActivity extends Activity {
     private static final int REQ_AUDIO = 1;
     private static final int REQ_LOCATION = 2;
+    private static final int REQ_FILE = 3;
+    private ValueCallback<Uri[]> fileCb;
     private static final String NOTIF_PERMISSION = "android.permission.POST_NOTIFICATIONS";
     private static final String APP_URL = "file:///android_asset/index.html";
 
@@ -131,7 +135,19 @@ public class MainActivity extends Activity {
                     }
                 });
             }
-
+            @Override
+            public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb,
+                    FileChooserParams params) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try {
+                    startActivityForResult(params.createIntent(), REQ_FILE);
+                } catch (Exception e) {
+                    fileCb = null;
+                    return false;
+                }
+                return true;
+            }
             // Localização: só quando a página pede (aba Mapa) e só para o próprio app.
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin,
@@ -357,7 +373,14 @@ static void tap(String k) {
             pendingGeoOrigin = null;
         }
     }
-
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == REQ_FILE && fileCb != null) {
+            fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
+            fileCb = null;
+        }
+    }
     @Override
     protected void onDestroy() {
         stopRoom();
