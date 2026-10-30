@@ -1,4 +1,6 @@
 package br.com.localtalk;
+import android.media.AudioManager;
+import android.media.VolumeProvider;
 import android.net.Uri;
 import android.webkit.ValueCallback;
 import android.media.AudioManager;
@@ -178,11 +180,15 @@ public class MainActivity extends Activity {
     }
     private volatile boolean volKeysOn = false;
 static volatile MainActivity instance;
-
+    static volatile boolean volKeysOn;
 static void tap(String k) {
     MainActivity a = instance;
     if (a != null) a.js("window.ltKeyTap&&window.ltKeyTap('" + k + "')");
 }
+        static void key(String src) {
+        MainActivity a = instance;
+        if (a != null) a.js("window.ltKey&&window.ltKey(" + RoomCore.quote(src) + ")");
+    }
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (volKeysOn && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
@@ -256,6 +262,10 @@ static void tap(String k) {
     }
 
     private class Bridge {
+                @JavascriptInterface
+        public void volKeys(final boolean on) {
+            volKeysOn = on;
+        }
         @JavascriptInterface
         public void roomHost(final String id, final String name, final String offer) {
             new Thread(new Runnable() {
@@ -373,6 +383,17 @@ static void tap(String k) {
             pendingGeoOrigin = null;
         }
     }
+        @Override
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        int k = e.getKeyCode();
+        if (volKeysOn && (k == KeyEvent.KEYCODE_VOLUME_UP || k == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+                key(k == KeyEvent.KEYCODE_VOLUME_UP ? "vu" : "vd");
+            }
+            return true;
+        }
+        return super.dispatchKeyEvent(e);
+    }
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
@@ -451,6 +472,20 @@ static void tap(String k) {
             if (Build.VERSION.SDK_INT < 21 || session != null) return;
             try {
                 session = new MediaSession(this, "LocalTalk");
+                                session.setPlaybackToRemote(new VolumeProvider(VolumeProvider.VOLUME_CONTROL_RELATIVE, 100, 50) {
+                    @Override
+                    public void onAdjustVolume(int direction) {
+                        if (MainActivity.volKeysOn) {
+                            if (direction > 0) MainActivity.key("vu");
+                            else if (direction < 0) MainActivity.key("vd");
+                        } else {
+                            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                            am.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                                    direction > 0 ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER,
+                                    AudioManager.FLAG_SHOW_UI);
+                        }
+                    }
+                });
                 session.setCallback(new MediaSession.Callback() {
                     @Override
                     public boolean onMediaButtonEvent(Intent i) {
