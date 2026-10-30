@@ -189,7 +189,7 @@ public class MainActivity extends Activity {
 
         webView.loadUrl(APP_URL);
     }
-    private volatile boolean volKeysOn = false;
+    
 static volatile MainActivity instance;
     static volatile boolean volKeysOn;
 static void tap(String k) {
