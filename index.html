@@ -203,4 +203,4 @@ $('#go').onclick=async()=>{NAME=$('#nm').value.trim()||'Dispositivo '+ID.slice(0
  try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});mic.getAudioTracks()[0].enabled=false}catch(e){mic=null}
  $('#splash').hidden=true;$('#app').hidden=false;drawCh();render();if(!mic)sys('Microfone indisponível: chat e recebimento de voz ativos, mas falar está desativado. Abra por HTTPS e permita o microfone.');
  applyOpt();ui()};
-</script></body></html>
+</script><script src="lt-extras.js"></script></body></html>
