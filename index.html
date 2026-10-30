@@ -216,8 +216,8 @@ $('#q').oninput=render;$('#fv').onclick=()=>{fvOn=!fvOn;$('#fv').classList.toggl
 $('#nm').value=NAME;
 $('#go').onclick=async()=>{NAME=$('#nm').value.trim()||'Dispositivo '+ID.slice(0,3);localStorage.lt_name=NAME;$('#cn').value=NAME;
  if(!window.RTCPeerConnection||!window.CompressionStream){$('#err').textContent='Navegador sem suporte. Use Chrome, Edge ou Safari atualizados.';return}
- try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});mic.getAudioTracks()[0].enabled=false}catch(e){mic=null}
- $('#splash').hidden=true;$('#app').hidden=false;drawCh();render();if(!mic)sys('Microfone indisponível: chat e recebimento de voz ativos, mas falar está desativado. Abra por HTTPS e permita o microfone.');
+ try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});mic.getAudioTracks()[0].enabled=false}catch(e){mic=null;window.micErr=(e&&e.name||'erro')+' '+(e&&e.message||'')}
+ $('#splash').hidden=true;$('#app').hidden=false;drawCh();render();if(!mic)sys('Microfone indisponível: chat e recebimento de voz ativos, mas falar está desativado. Abra por HTTPS e permita o microfone. ['+window.micErr+']')
  applyOpt();ui()};
  // ===== Enviar áudio e arquivos =====
 const MAXA=8*1048576,atts=[],rx={};
