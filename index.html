@@ -36,6 +36,7 @@ i.d{width:9px;height:9px;border-radius:50%;background:var(--m)}i.d.on{background
 #modal>div{background:var(--p);border-radius:18px;padding:18px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
 textarea{height:90px;font-size:12px;word-break:break-all}label,.sm{color:var(--m);font-size:13px}
 #sb{display:flex;gap:8px}#sb input{flex:1}.m .fv{cursor:pointer;float:right;margin-left:8px;opacity:.4}.m .fv.on{opacity:1}
+#sos{background:#5a1b22}
 select{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);border-radius:12px;padding:12px;width:100%}.it button{padding:8px 10px}
 #chs{display:flex;gap:6px;overflow-x:auto;flex:none}#chs button{padding:8px 10px;white-space:nowrap;font-size:13px}#chs .sel{background:var(--a);color:#fff}#chs .em{border:1px solid var(--r)}#chs .em.sel{background:var(--r)}
 </style></head>
@@ -44,7 +45,7 @@ select{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);
 <div id="app" hidden>
 <nav><b class="logo">Local<span>Talk</span></b><button data-v="chat" class="sel">💬 Conversas</button><button data-v="dev">📡 Dispositivos</button><button data-v="map">🗺 Mapa</button><button data-v="cfg">⚙️ Ajustes</button></nav>
 <main><div id="hd"></div>
-<section id="v-chat"><div id="chs"></div><div id="sb"><input id="q" placeholder="Pesquisar no histórico..."><button id="fv" title="Só favoritas">⭐</button></div><div id="msgs"></div><div id="bar"><button id="ptt">Segure para falar</button><button id="call" title="Chamar atenção">🔔</button></div><div id="inp"><input id="tx" placeholder="Digite uma mensagem..." maxlength="500"><button id="snd" class="pri">➤</button></div></section>
+<section id="v-chat"><div id="chs"></div><div id="sb"><input id="q" placeholder="Pesquisar no histórico..."><button id="fv" title="Só favoritas">⭐</button></div><div id="msgs"></div><div id="bar"><button id="ptt">Segure para falar</button><button id="call" title="Chamar atenção">🔔</button><button id="sos" title="Segure 1 segundo para enviar SOS">🆘</button></div><div id="inp"><input id="tx" placeholder="Digite uma mensagem..." maxlength="500"><button id="snd" class="pri">➤</button></div></section>
 <section id="v-dev" hidden><div id="dl" style="display:flex;flex-direction:column;gap:8px"></div><button id="bi" class="pri">➕ Convidar aparelho</button><button id="bj">🔗 Entrar em uma rede (tenho um convite)</button><button id="rc" class="pri" hidden>🔢 Criar sala com código</button><button id="rj" hidden>🔢 Entrar com código</button><p id="rm" class="sm" hidden></p><p class="sm">Depois que 2 aparelhos se conectam, os demais se ligam automaticamente a todos (malha). Espaço = falar no PC.</p></section>
 <section id="v-map" hidden><label class="ck"><input type="checkbox" id="lo">Compartilhar minha localização com quem está conectado</label><p id="lh" class="sm">Desligado. Só quem está conectado a você vê a posição, e ela não é guardada. Ao fechar o app, volta a ficar desligado.</p><canvas id="cv" width="360" height="360" style="width:100%;max-width:360px;align-self:center;background:var(--p);border-radius:16px"></canvas><div id="ml" style="display:flex;flex-direction:column;gap:8px"></div></section>
 <section id="v-cfg" hidden><label>Seu nome</label><input id="cn" maxlength="20"><label>Nome da sala</label><input id="rn" maxlength="30" placeholder="Ex.: Equipe Norte (só o administrador altera)"><label>Perfil de uso</label><select id="pf"><option value="">Personalizado</option><option value="campo">Equipe de campo</option><option value="evento">Evento</option><option value="familia">Família</option><option value="silencioso">Silencioso (sem bipes)</option></select><label class="ck"><input type="checkbox" id="o1">Sons (bipe de rádio e mensagens)</label><label class="ck"><input type="checkbox" id="o2">Manter tela ligada</label><label class="ck"><input type="checkbox" id="o3">Modo segundo plano (mantém o áudio ativo)</label><p class="sm">Funciona na mesma rede Wi-Fi/hotspot, com ou sem internet. O áudio vai direto entre aparelhos, criptografado (WebRTC).</p></section>
@@ -84,7 +85,7 @@ async function on(p,m){
   if(m.k=='want'){if(!peers[m.from])dial(m.from,p)}
   else if(m.k=='offer'){if(peers[m.from])return;const q=mk(m.from);q.pc.ondatachannel=e=>dcs(q,e.channel);await q.pc.setRemoteDescription({type:'offer',sdp:m.d});await q.pc.setLocalDescription(await q.pc.createAnswer());await gather(q.pc);tx(p,{t:'sig',to:m.from,from:ID,k:'answer',d:q.pc.localDescription.sdp})}
   else if(m.k=='answer'){const q=peers[m.from];if(q)await q.pc.setRemoteDescription({type:'answer',sdp:m.d})}}
- else if(m.t=='msg'){tx(p,{t:'ack',id:m.id});if(seen.has(m.id))return;seen.add(m.id);const n=pub(m);add(n);beep(n.ch=='Emergência'?1200:660)}
+ else if(m.t=='msg'){tx(p,{t:'ack',id:m.id});if(seen.has(m.id))return;seen.add(m.id);const n=pub(m);add(n);beep(n.ch=='Emergência'?1200:660);if(n.ch=='Emergência'){navigator.vibrate&&navigator.vibrate([400,150,400]);if(n.text.startsWith('🆘')&&chn!='Emergência')sys('🆘 SOS de '+n.name+' — veja o canal Emergência')}}
  else if(m.t=='ack'){const x=hist.find(h=>h.id==m.id&&h.from==ID);if(x){x.ak=x.ak||[];if(!x.ak.includes(p.id)){x.ak.push(p.id);x.pd=0;save();render()}}}
  else if(m.t=='call'){sys(dn(p)+' está chamando 🔔');beep(1000,.4);navigator.vibrate&&navigator.vibrate([300,100,300])}
  else if(m.t=='tx'){const c=CH.includes(m.ch)?m.ch:'Geral';if(m.on){talk[p.id]=c;qdel(c,p.id);if(c==wq)wn=0}else{const c0=talk[p.id]||c;delete talk[p.id];if(c0==chn||c0=='Emergência')beep(520,.08);qnotify(c0)}ui()}
@@ -123,6 +124,12 @@ const sys=t=>add({sys:1,text:t,ts:Date.now(),id:rnd()});
 function send(){const v=$('#tx').value.trim();if(!v)return;$('#tx').value='';const m={t:'msg',id:uid(),from:ID,name:NAME,text:v,ts:Date.now(),ak:[],ch:chn};m.pd=Object.values(peers).some(x=>x.hi&&x.on)?0:1;seen.add(m.id);add(m);all(pub(m))}
 $('#snd').onclick=send;$('#tx').onkeydown=e=>{if(e.key=='Enter')send()};
 $('#call').onclick=()=>{all({t:'call'});sys('Você chamou todos 🔔');beep(1000,.3)};
+function say(t,ch){const m={t:'msg',id:uid(),from:ID,name:NAME,text:t,ts:Date.now(),ak:[],ch};m.pd=Object.values(peers).some(x=>x.hi&&x.on)?0:1;seen.add(m.id);add(m);all(pub(m))}
+function sos(){if(txOn)return;setCh('Emergência');const pos=q=>' Posição: '+q.lat.toFixed(5)+', '+q.lon.toFixed(5)+(q.acc?' (±'+q.acc+' m)':'')+'.',gl=navigator.geolocation;
+ all({t:'call'});beep(1000,.3);say('🆘 SOS de '+NAME+'.'+(me?pos(me):gl?' Procurando posição…':' Sem GPS neste aparelho.'),'Emergência');
+ if(!me&&gl)gl.getCurrentPosition(g=>say('📍 Posição de '+NAME+':'+pos({lat:g.coords.latitude,lon:g.coords.longitude,acc:Math.round(g.coords.accuracy||0)}),'Emergência'),()=>say('📍 Não consegui obter a posição de '+NAME+'.','Emergência'),{enableHighAccuracy:true,timeout:8000,maximumAge:10000})}
+let sst=0;const sb=$('#sos');sb.onpointerdown=e=>{try{sb.setPointerCapture(e.pointerId)}catch(x){}sb.textContent='⏳';sst=setTimeout(()=>{sst=0;sb.textContent='🆘';sos()},1200)};
+sb.onpointerup=sb.onpointercancel=()=>{if(sst){clearTimeout(sst);sst=0;sb.textContent='🆘'}};sb.oncontextmenu=e=>e.preventDefault();
 const busy=c=>Object.values(talk).includes(c);
 function qset(c,id,l){(qs[c]=qs[c]||{})[id]={lc:l,at:Date.now()}}
 function qdel(c,id){if(qs[c])delete qs[c][id]}
