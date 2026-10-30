@@ -1,5 +1,8 @@
 package br.com.localtalk;
-
+import android.media.AudioManager;
+import android.media.VolumeProvider;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Notification;
@@ -67,7 +70,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        instance = this;
         if (Build.VERSION.SDK_INT >= 23) {
             List<String> ask = new ArrayList<String>();
             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
@@ -158,7 +161,12 @@ public class MainActivity extends Activity {
         webView.loadUrl(APP_URL);
     }
     private volatile boolean volKeysOn = false;
+static volatile MainActivity instance;
 
+static void tap(String k) {
+    MainActivity a = instance;
+    if (a != null) a.js("window.ltKeyTap&&window.ltKeyTap('" + k + "')");
+}
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (volKeysOn && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
@@ -353,6 +361,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         stopRoom();
+        if (instance == this) instance = null;
         stopService(new Intent(this, KeepAliveService.class));
         super.onDestroy();
     }
@@ -374,7 +383,7 @@ public class MainActivity extends Activity {
 
         private PowerManager.WakeLock wake;
         private WifiManager.WifiLock wifi;
-
+        private MediaSession
         @Override
         public IBinder onBind(Intent intent) {
             return null;
@@ -382,6 +391,10 @@ public class MainActivity extends Activity {
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
+            if (intent != null && "br.com.localtalk.PTT".equals(intent.getAction())) {
+    MainActivity.tap("hs");
+    return START_NOT_STICKY;
+}
             Notification n = buildNotification();
             try {
                 if (Build.VERSION.SDK_INT >= 30) {
@@ -394,6 +407,7 @@ public class MainActivity extends Activity {
                 return START_NOT_STICKY;
             }
             acquireLocks();
+            startSession();
             return START_NOT_STICKY;
         }
 
@@ -404,7 +418,58 @@ public class MainActivity extends Activity {
 
         @Override
         public void onDestroy() {
+            stopSession();
             releaseLocks();
+            private void startSession() {
+    if (Build.VERSION.SDK_INT < 21 || session != null) return;
+    try {
+        session = new MediaSession(this, "LocalTalk");
+        session.setCallback(new MediaSession.Callback() {
+            @Override
+            public boolean onMediaButtonEvent(Intent i) {
+                KeyEvent ke = i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                if (ke != null && ke.getAction() == KeyEvent.ACTION_DOWN && ke.getRepeatCount() == 0) {
+                    MainActivity.tap("hs");
+                }
+                return true;
+            }
+        });
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE
+                        | PlaybackState.ACTION_PLAY_PAUSE)
+                .setState(PlaybackState.STATE_PLAYING, 0, 1f).build());
+        session.setPlaybackToRemote(new VolumeProvider(VolumeProvider.VOLUME_CONTROL_RELATIVE, 100, 50) {
+            @Override
+            public void onAdjustVolume(int direction) {
+                if (direction == 0) return;
+                MainActivity a = MainActivity.instance;
+                if (a != null && a.volKeysOn) {
+                    MainActivity.tap(direction > 0 ? "up" : "down");
+                } else {
+                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                            direction > 0 ? AudioManager.ADJUST_RAISE : AudioManager.ADJUST_LOWER,
+                            AudioManager.FLAG_SHOW_UI);
+                }
+            }
+        });
+        session.setActive(true);
+    } catch (RuntimeException e) {
+        session = null;
+    }
+}
+
+private void stopSession() {
+    if (session != null) {
+        try {
+            session.setActive(false);
+            session.release();
+        } catch (RuntimeException e) {
+            // nada a fazer
+        }
+        session = null;
+    }
+}
             super.onDestroy();
         }
 
@@ -427,6 +492,11 @@ public class MainActivity extends Activity {
                     .setSmallIcon(android.R.drawable.stat_sys_headset)
                     .setContentIntent(pi)
                     .setOngoing(true);
+            Intent ptt = new Intent(this, KeepAliveService.class).setAction("br.com.localtalk.PTT");
+int f2 = Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0;
+PendingIntent pp = PendingIntent.getService(this, 1, ptt, f2);
+b.addAction(android.R.drawable.ic_btn_speak_now, "Falar / parar", pp);
+if (Build.VERSION.SDK_INT >= 21) b.setVisibility(Notification.VISIBILITY_PUBLIC);
             return b.build();
         }
 
