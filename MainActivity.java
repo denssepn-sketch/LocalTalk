@@ -62,6 +62,8 @@ public class MainActivity extends Activity {
     private static final int REQ_AUDIO = 1;
     private static final int REQ_LOCATION = 2;
     private static final int REQ_FILE = 3;
+    private static final int REQ_MIC = 4;
+    private PermissionRequest pendingMicReq;
     private ValueCallback<Uri[]> fileCb;
     private Uri camUri;
     private static final String NOTIF_PERMISSION = "android.permission.POST_NOTIFICATIONS";
@@ -121,6 +123,33 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             // Microfone: concede só o áudio. Câmera, MIDI e o resto são negados.
+                        @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        List<String> allowed = new ArrayList<String>();
+                        for (String r : request.getResources()) {
+                            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) {
+                                allowed.add(r);
+                            }
+                        }
+                        if (allowed.isEmpty()) {
+                            request.deny();
+                            return;
+                        }
+                        if (Build.VERSION.SDK_INT >= 23
+                                && checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                != PackageManager.PERMISSION_GRANTED) {
+                            if (pendingMicReq != null) pendingMicReq.deny();
+                            pendingMicReq = request;
+                            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
+                            return;
+                        }
+                        request.grant(allowed.toArray(new String[0]));
+                    }
+                });
+            }
                         @Override
             public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb,
                     FileChooserParams params) {
@@ -226,7 +255,7 @@ static void tap(String k) {
     private void js(final String code) {
         runOnUiThread(new Runnable() {
             @Override
-            public void run() {
+            run() {
                 webView.evaluateJavascript(code, null);
             }
         });
@@ -242,7 +271,7 @@ static void tap(String k) {
             RoomCore r = new RoomCore(name, RoomCore.HTTP_PORT, RoomCore.DISCOVERY_PORT, RoomCore.TTL_MS);
             r.listener = new RoomCore.AnswerListener() {
                 @Override
-                public void onAnswer(String answer) {
+                onAnswer(String answer) {
                     js("window.ltOnAnswer&&window.ltOnAnswer(" + RoomCore.quote(answer) + ")");
                 }
             };
@@ -405,6 +434,22 @@ static void tap(String k) {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                if (requestCode == REQ_MIC && pendingMicReq != null) {
+            boolean ok = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (ok) {
+                pendingMicReq.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            } else {
+                pendingMicReq.deny();
+                try {
+                    startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName())));
+                } catch (RuntimeException e) {
+                    // nada a fazer
+                }
+            }
+            pendingMicReq = null;
+        }
         if (requestCode == REQ_AUDIO && wantKeepAlive) {
             setKeepAlive(true);
         }
