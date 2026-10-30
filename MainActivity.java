@@ -23,6 +23,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.view.KeyEvent;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -156,7 +157,27 @@ public class MainActivity extends Activity {
 
         webView.loadUrl(APP_URL);
     }
+    private volatile boolean volKeysOn = false;
 
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (volKeysOn && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (event.getRepeatCount() == 0) {
+                js("window.ltKey&&window.ltKey('" + (keyCode == KeyEvent.KEYCODE_VOLUME_UP ? "up" : "down") + "',true)");
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (volKeysOn && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            js("window.ltKey&&window.ltKey('" + (keyCode == KeyEvent.KEYCODE_VOLUME_UP ? "up" : "down") + "',false)");
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
+    }
     // ---- Sala por código de 6 dígitos (o servidor e a descoberta ficam no RoomCore, abaixo) ----
     private RoomCore room;
     private WifiManager.MulticastLock multicast;
@@ -268,7 +289,10 @@ public class MainActivity extends Activity {
             }).start();
         }
 
-        @JavascriptInterface
+                @JavascriptInterface
+        public void volumeKeys(final boolean on) {
+            volKeysOn = on;
+        }@JavascriptInterface
         public void keepAlive(final boolean on) {
             runOnUiThread(new Runnable() {
                 @Override
