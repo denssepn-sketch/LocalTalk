@@ -1,5 +1,7 @@
 name: Build Windows
+
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: windows-latest
@@ -8,8 +10,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Copiar index.html
-        run: Copy-Item index.html windows/index.html
+      - name: Copiar arquivos do app
+        run: |
+          Copy-Item index.html windows/index.html
+          Copy-Item lt-room.js windows/lt-room.js
+          Copy-Item preload.js windows/preload.js
+      - name: Incluir os arquivos novos no EXE
+        working-directory: windows
+        run: |
+          @'
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const files = p.build && p.build.files;
+          if (Array.isArray(files)) {
+            for (const f of ['main.js', 'index.html', 'lt-room.js', 'preload.js']) if (!files.includes(f)) files.push(f);
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2));
+            console.log('files:', files);
+          } else {
+            console.log('sem build.files: o padrao ja inclui tudo');
+          }
+          '@ | Set-Content -Path fix-files.cjs
+          node fix-files.cjs
       - name: Construir EXE
         working-directory: windows
         run: |
