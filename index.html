@@ -47,7 +47,7 @@ select{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);
 <main><div id="hd"></div>
 <section id="v-chat"><div id="chs"></div><div id="sb"><input id="q" placeholder="Pesquisar no histórico..."><button id="fv" title="Só favoritas">⭐</button></div><div id="msgs"></div><div id="bar"><button id="ptt">Segure para falar</button><button id="call" title="Chamar atenção">🔔</button><button id="sos" title="Segure 1 segundo para enviar SOS">🆘</button></div><div id="inp"><input id="tx" placeholder="Digite uma mensagem..." maxlength="500"><button id="snd" class="pri">➤</button></div></section>
 <section id="v-dev" hidden><div id="dl" style="display:flex;flex-direction:column;gap:8px"></div><button id="bi" class="pri">➕ Convidar aparelho</button><button id="bj">🔗 Entrar em uma rede (tenho um convite)</button><button id="rc" class="pri" hidden>🔢 Criar sala com código</button><button id="rj" hidden>🔢 Entrar com código</button><p id="rm" class="sm" hidden></p><p class="sm">Depois que 2 aparelhos se conectam, os demais se ligam automaticamente a todos (malha). Espaço = falar no PC.</p></section>
-<section id="v-map" hidden><label class="ck"><input type="checkbox" id="lo">Compartilhar minha localização com quem está conectado</label><p id="lh" class="sm">Desligado. Só quem está conectado a você vê a posição, e ela não é guardada. Ao fechar o app, volta a ficar desligado.</p><canvas id="cv" width="360" height="360" style="width:100%;max-width:360px;align-self:center;background:var(--p);border-radius:16px"></canvas><div id="ml" style="display:flex;flex-direction:column;gap:8px"></div></section><label class="ck"><input type="checkbox" id="o4">Usar botões de volume (volume + = falar)</label><label>Botão volume − faz</label><select id="vd"><option value="">Nada</option><option value="mute">Silenciar/ativar todas as conversas</option><option value="call">Chamar atenção 🔔</option></select>
+<section id="v-map" hidden><label class="ck"><input type="checkbox" id="lo">Compartilhar minha localização com quem está conectado</label><p id="lh" class="sm">Desligado. Só quem está conectado a você vê a posição, e ela não é guardada. Ao fechar o app, volta a ficar desligado.</p><div id="spk" hidden style="display:flex;flex-direction:column;gap:8px"></div><canvas id="cv" width="360" height="360" style="width:100%;max-width:360px;align-self:center;background:var(--p);border-radius:16px"></canvas><div id="ml" style="display:flex;flex-direction:column;gap:8px"></div></section><label class="ck"><input type="checkbox" id="o4">Usar botões de volume (volume + = falar)</label><label>Botão volume − faz</label><select id="vd"><option value="">Nada</option><option value="mute">Silenciar/ativar todas as conversas</option><option value="call">Chamar atenção 🔔</option></select>
 <section id="v-cfg" hidden><label>Seu nome</label><input id="cn" maxlength="20"><label>Nome da sala</label><input id="rn" maxlength="30" placeholder="Ex.: Equipe Norte (só o administrador altera)"><label>Perfil de uso</label><select id="pf"><option value="">Personalizado</option><option value="campo">Equipe de campo</option><option value="evento">Evento</option><option value="familia">Família</option><option value="silencioso">Silencioso (sem bipes)</option></select><label class="ck"><input type="checkbox" id="o1">Sons (bipe de rádio e mensagens)</label><label class="ck"><input type="checkbox" id="o2">Manter tela ligada</label><label class="ck"><input type="checkbox" id="o3">Modo segundo plano (mantém o áudio ativo)</label><p class="sm">Funciona na mesma rede Wi-Fi/hotspot, com ou sem internet. O áudio vai direto entre aparelhos, criptografado (WebRTC).</p></section>
 </main></div>
 <div id="modal" hidden><div><label id="l1"></label><textarea id="c1"></textarea><label id="l2"></label><textarea id="c2"></textarea><button id="act" class="pri"></button><button id="cp1">Copiar texto de cima</button><button id="cp2">Copiar texto de baixo</button><span id="hint" class="sm"></span><button id="x">Fechar</button></div></div>
@@ -196,7 +196,7 @@ let locOn=0,me=null,lw=null,lt=0;const R=6371000,rad=x=>x*Math.PI/180;
 function hav(a,b){const dl=rad(b.lat-a.lat),dg=rad(b.lon-a.lon),x=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(x)))}
 function brg(a,b){const y=Math.sin(rad(b.lon-a.lon))*Math.cos(rad(b.lat)),x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lon-a.lon));return(Math.atan2(y,x)*180/Math.PI+360)%360}
 const card=d=>['N','NE','L','SE','S','SO','O','NO'][Math.round(d/45)%8],fd=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(1)+' km';
-function mapRows(){const n=Date.now(),r=[];if(me)r.push({name:'Você',me:1,lat:me.lat,lon:me.lon,acc:me.acc});Object.values(peers).filter(p=>p.loc&&n-p.loc.ts<1800000).forEach(p=>r.push({name:dn(p),lat:p.loc.lat,lon:p.loc.lon,acc:p.loc.acc,age:Math.round((n-p.loc.ts)/1000),stale:n-p.loc.ts>300000}));
+function mapRows(){const n=Date.now(),r=[];if(me)r.push({id:ID,name:'Você',me:1,lat:me.lat,lon:me.lon,acc:me.acc});Object.values(peers).filter(p=>p.loc&&n-p.loc.ts<1800000).forEach(p=>r.push({id:p.id,name:dn(p),lat:p.loc.lat,lon:p.loc.lon,acc:p.loc.acc,age:Math.round((n-p.loc.ts)/1000),stale:n-p.loc.ts>300000}));
  let c=me;if(!c&&r.length)c={lat:r.reduce((s,x)=>s+x.lat,0)/r.length,lon:r.reduce((s,x)=>s+x.lon,0)/r.length};r.forEach(x=>{if(c){x.d=hav(c,x);x.b=brg(c,x)}});return{c,r}}
 function copyTxt(t){try{navigator.clipboard&&navigator.clipboard.writeText(t).catch(()=>{})}catch(e){}try{const a=document.createElement('textarea');a.value=t;document.body.append(a);a.select();document.execCommand('copy');a.remove()}catch(e){}}
 function drawMap(){if(cur!='map')return;const{c,r}=mapRows(),cv=$('#cv'),g=cv.getContext('2d'),W=cv.width,H=cv.height,ml=$('#ml');g.clearRect(0,0,W,H);ml.textContent='';
@@ -290,4 +290,28 @@ rb.onclick=async()=>{
   mr.start();rb.textContent='⏹';rb.style.background='var(--r)';
   rt=setTimeout(()=>{if(mr)mr.stop()},60000)
  }catch(e){mr=null;sys('Não consegui gravar: '+e.message)}};
+ // ===== Mapa: destaque de quem está falando =====
+const avc={};
+function avImg(id){const u=window.ltAvatar&&window.ltAvatar(id);if(!u)return null;let c=avc[id];if(!c||c.u!=u){const im=new Image();im.onload=()=>drawMap();im.src=u;c=avc[id]={u,im}}return c.im.complete&&c.im.naturalWidth?c.im:null}
+const speakers=()=>{const l=[];if(txOn)l.push({id:ID,name:'Você'});Object.keys(talk).forEach(i=>{if(peers[i])l.push({id:i,name:dn(peers[i])})});return l};
+const _dm=drawMap;
+drawMap=function(){
+ _dm();
+ if(cur!='map')return;
+ const sp=speakers(),bn=$('#spk'),{c,r}=mapRows();
+ bn.textContent='';bn.hidden=!sp.length;
+ sp.forEach(s=>{const d=E('div','it'),a=avImg(s.id),onMap=r.some(q=>q.id==s.id);
+  if(a){const im=E('img');im.src=a.src;im.style.cssText='width:40px;height:40px;border-radius:50%;object-fit:cover';d.append(im)}
+  d.append(E('b','','🎙 '+s.name+' falando'+(onMap?'':' (sem localização)')));bn.append(d)});
+ if(!c||!r.length)return;
+ const cv=$('#cv'),g=cv.getContext('2d'),W=cv.width,H=cv.height,t=Date.now()/300;
+ const xy=q=>({x:(q.lon-c.lon)*Math.cos(rad(c.lat))*111320,y:(q.lat-c.lat)*110540});
+ const mx=Math.max(50,...r.map(q=>{const o=xy(q);return Math.hypot(o.x,o.y)}))*1.2,k=(W/2-28)/mx;
+ r.forEach(q=>{if(!sp.some(s=>s.id==q.id))return;
+  const o=xy(q),x=W/2+o.x*k,y=H/2-o.y*k;
+  g.strokeStyle='#ff4d5e';g.lineWidth=3;g.beginPath();g.arc(x,y,14+3*Math.sin(t),0,7);g.stroke();
+  const a=avImg(q.id);
+  if(a){g.save();g.beginPath();g.arc(x,y,12,0,7);g.clip();g.drawImage(a,x-12,y-12,24,24);g.restore()}
+  else{g.fillStyle='#ff4d5e';g.beginPath();g.arc(x,y,9,0,7);g.fill()}})};
+setInterval(()=>{if(cur=='map'&&speakers().length)drawMap()},400);
 </script><script src="lt-extras.js"></script></body></html>
