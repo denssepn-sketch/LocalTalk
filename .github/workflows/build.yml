@@ -25,19 +25,69 @@ jobs:
             mkdir -p $RES/mipmap-$d
             cp ic_launcher.png $RES/mipmap-$d/ic_launcher.png
           done
-          mkdir -p $RES/mipmap-anydpi-v26 $RES/drawable-nodpi $RES/values
+          mkdir -p $RES/mipmap-anydpi-v26 $RES/mipmap-anydpi-v33 $RES/drawable-nodpi $RES/values $RES/values-v31
           cp ic_foreground.png $RES/drawable-nodpi/ic_foreground.png
-          cat > $RES/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          # fundo em gradiente (se o arquivo existir); senão usa cor lisa
+          if [ -f ic_background.png ]; then
+            cp ic_background.png $RES/drawable-nodpi/ic_background.png
+            BG='@drawable/ic_background'
+          else
+            BG='@color/ic_bg'
+          fi
+          # ícone de notificação (se não existir, usa o foreground)
+          if [ -f ic_notificacao.png ]; then
+            cp ic_notificacao.png $RES/drawable-nodpi/ic_stat_localtalk.png
+          else
+            cp ic_foreground.png $RES/drawable-nodpi/ic_stat_localtalk.png
+          fi
+          cat > $RES/mipmap-anydpi-v26/ic_launcher.xml <<EOF
           <?xml version="1.0" encoding="utf-8"?>
           <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@color/ic_bg"/>
+            <background android:drawable="$BG"/>
             <foreground android:drawable="@drawable/ic_foreground"/>
           </adaptive-icon>
           EOF
+          # ícone monocromático (Android 13+): só se o arquivo existir
+          if [ -f ic_monochrome.png ]; then
+            cp ic_monochrome.png $RES/drawable-nodpi/ic_monochrome.png
+            cat > $RES/mipmap-anydpi-v33/ic_launcher.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="$BG"/>
+            <foreground android:drawable="@drawable/ic_foreground"/>
+            <monochrome android:drawable="@drawable/ic_monochrome"/>
+          </adaptive-icon>
+          EOF
+          else
+            rmdir $RES/mipmap-anydpi-v33
+          fi
           cat > $RES/values/colors.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-            <color name="ic_bg">#030A3C</color>
+            <color name="ic_bg">#050A17</color>
+          </resources>
+          EOF
+          # tema do app (fundo escuro, sem piscar branco) e tela de abertura do Android 12+
+          cat > $RES/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <style name="LTTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+              <item name="android:windowBackground">@color/ic_bg</item>
+              <item name="android:statusBarColor">@color/ic_bg</item>
+              <item name="android:navigationBarColor">@color/ic_bg</item>
+            </style>
+          </resources>
+          EOF
+          cat > $RES/values-v31/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <style name="LTTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+              <item name="android:windowBackground">@color/ic_bg</item>
+              <item name="android:statusBarColor">@color/ic_bg</item>
+              <item name="android:navigationBarColor">@color/ic_bg</item>
+              <item name="android:windowSplashScreenBackground">@color/ic_bg</item>
+              <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_foreground</item>
+            </style>
           </resources>
           EOF
           cat > proj/settings.gradle <<'EOF'
