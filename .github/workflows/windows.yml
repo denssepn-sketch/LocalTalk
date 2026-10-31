@@ -15,6 +15,7 @@ jobs:
           Copy-Item index.html windows/index.html
           Copy-Item lt-room.js windows/lt-room.js
           Copy-Item preload.js windows/preload.js
+          if (Test-Path lt-extras.js) { Copy-Item lt-extras.js windows/lt-extras.js }
       - name: Incluir os arquivos novos no EXE
         working-directory: windows
         run: |
@@ -23,7 +24,7 @@ jobs:
           const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           const files = p.build && p.build.files;
           if (Array.isArray(files)) {
-            for (const f of ['main.js', 'index.html', 'lt-room.js', 'preload.js']) if (!files.includes(f)) files.push(f);
+            for (const f of ['main.js', 'index.html', 'lt-room.js', 'preload.js', 'lt-extras.js']) if (!files.includes(f)) files.push(f);
             fs.writeFileSync('package.json', JSON.stringify(p, null, 2));
             console.log('files:', files);
           } else {
