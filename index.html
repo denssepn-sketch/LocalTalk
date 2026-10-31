@@ -482,4 +482,399 @@ drawMap=function(){RM_dr();if(!RM_on)return;
 RM_btn.onclick=()=>{if(RM_on){RM_off();return}RM_on=1;RM_btn.textContent='🗺 Fechar mapa real';RM_note.textContent='';drawMap()};
 RM_ctr.onclick=()=>{const{c}=mapRows();if(c&&RM_map)RM_map.easeTo({center:[c.lon,c.lat],pitch:60,duration:600})};
 </script><script src="lt-extras.js"></script>
+<!-- ===================== LocalTalk · Redesign · PARTE 1 =====================
+     Design System + Navegação + Ajustes.
+     COLE ESTE BLOCO INTEIRO LOGO ANTES DE </body> NO index.html.
+     Não altera nenhuma função do app (WebRTC, áudio, mensagens, localização). -->
+<style id="lt-theme">
+/* ---------- Tokens ---------- */
+:root{
+  --bg:#050a17;--p:#0d1630;--l:#18244d;--t:#eaf0ff;--m:#93a1c6;--a:#2f6bff;--r:#ff4d5e;--g:#27d17a;
+  --a-hi:#4b86ff;--a-lo:#1b49d1;--vio-hi:#8b5cf6;--vio-lo:#6232d6;--red-hi:#ff5a6c;--red-lo:#c0182d;
+  --line:rgba(130,160,255,.18);
+  --card:linear-gradient(180deg,rgba(26,40,88,.78),rgba(13,22,50,.86));
+  --sh:0 10px 28px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06);
+  --glow:0 0 0 1px rgba(75,134,255,.5),0 8px 24px rgba(47,107,255,.35);
+  --rad:18px;--rad-s:14px;--tap:48px;
+  --mic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='2' width='6' height='12' rx='3'/%3E%3Cpath d='M5 11a7 7 0 0 0 14 0M12 18v4'/%3E%3C/svg%3E");
+}
+html,body{background:radial-gradient(120% 55% at 50% -8%,#14307a 0%,#07102a 45%,#050a17 100%) fixed;color:var(--t)}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- Botões (base + variantes) ---------- */
+button{min-height:var(--tap);border-radius:var(--rad-s);background:linear-gradient(180deg,#1d2c5e,#142048);border:1px solid var(--line);box-shadow:var(--sh);font-weight:600;transition:transform .12s ease,filter .12s ease,box-shadow .2s ease;-webkit-tap-highlight-color:transparent}
+button:active{transform:scale(.97);filter:brightness(1.18)}
+button:disabled{opacity:.5}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #8fb0ff;outline-offset:2px}
+.pri{background:linear-gradient(180deg,var(--a-hi),var(--a-lo));border-color:rgba(255,255,255,.18);box-shadow:var(--glow);color:#fff}
+#rc{background:linear-gradient(180deg,var(--vio-hi),var(--vio-lo));box-shadow:0 8px 24px rgba(124,58,237,.35),inset 0 1px 0 rgba(255,255,255,.2)}
+.it button{min-width:44px;min-height:44px}
+
+/* ---------- Campos ---------- */
+input,textarea,select{background:rgba(8,14,34,.85);border:1px solid var(--line);border-radius:var(--rad-s);min-height:var(--tap);transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--a-hi);box-shadow:0 0 0 3px rgba(47,107,255,.22)}
+input::placeholder{color:#6f7fa8}
+textarea{min-height:90px}
+
+/* ---------- Cartões ---------- */
+.it,.lt-card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);box-shadow:var(--sh)}
+.lt-card{padding:14px;display:flex;flex-direction:column;gap:12px}
+.lt-card>h3{font:700 12px/1 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--m)}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{display:flex;align-items:center;gap:8px;color:var(--t);font-size:13px;font-weight:600}
+.ico{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:10px;background:rgba(47,107,255,.16);color:#8fb0ff;flex:none}
+.ico svg.i{width:18px;height:18px}
+.chip{align-self:flex-start;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:var(--g);border:1px solid rgba(39,209,122,.5);background:rgba(39,209,122,.08)}
+
+/* ---------- Perfil ---------- */
+.prof{display:flex;align-items:center;gap:14px}
+.av{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font:700 26px system-ui,sans-serif;text-transform:uppercase;background:linear-gradient(135deg,#3b7bff,#7c3aed);box-shadow:0 0 0 3px rgba(255,255,255,.08),0 0 22px rgba(47,107,255,.45);flex:none}
+.prof b{display:block;font-size:20px;word-break:break-word}
+.prof small{display:flex;align-items:center;gap:6px;color:var(--m);margin-top:2px}
+.prof .dot{width:9px;height:9px;border-radius:50%;background:var(--m);flex:none}
+.prof .dot.on{background:var(--g);box-shadow:0 0 8px var(--g)}
+
+/* ---------- Interruptores (checkbox vira switch) ---------- */
+.ck{gap:12px;min-height:var(--tap);color:var(--t)}
+.ck .ico{order:1}
+.ck>span:not(.ico){order:2;flex:1}
+.ck input[type=checkbox]{order:3;margin-left:auto;-webkit-appearance:none;appearance:none;flex:none;position:relative;width:50px;height:30px;min-height:0;padding:0;border-radius:15px;background:#1a2552;border:1px solid var(--line);transition:background .2s}
+.ck input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#c9d4f5;transition:transform .2s,background .2s}
+.ck input[type=checkbox]:checked{background:linear-gradient(180deg,var(--a-hi),var(--a-lo))}
+.ck input[type=checkbox]:checked::after{transform:translateX(20px);background:#fff}
+
+/* ---------- Navegação (4 abas) ---------- */
+nav{background:rgba(9,16,38,.94);border-top:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+nav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:62px;padding:8px 4px;font-size:11px;font-weight:600;background:none;border:0;box-shadow:none;border-radius:0;color:var(--m)}
+nav button.sel{color:#fff;background:linear-gradient(180deg,rgba(47,107,255,.2),transparent)}
+nav button.sel svg.i{color:#8fb0ff;filter:drop-shadow(0 0 6px rgba(75,134,255,.8))}
+nav button.sel::before{content:"";position:absolute;top:0;left:50%;width:32px;height:3px;margin-left:-16px;border-radius:0 0 4px 4px;background:var(--a-hi);box-shadow:0 0 12px var(--a-hi)}
+.pc nav button{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14px;padding:14px 20px;min-height:52px}
+.pc nav button.sel::before{top:20%;bottom:20%;left:0;width:3px;height:auto;margin:0;border-radius:0 4px 4px 0}
+#hd{background:rgba(10,18,40,.6);border-bottom:1px solid var(--line)}
+
+/* ---------- Conversas: canais, balões, falar, SOS ---------- */
+#chs{padding:4px 2px 8px}
+#chs button{min-height:40px;border-radius:999px;padding:8px 14px}
+#chs .sel{background:linear-gradient(180deg,var(--a-hi),var(--a-lo));box-shadow:var(--glow);color:#fff}
+#chs .em{border-color:rgba(255,77,94,.7);color:#ff9aa5}
+#chs .em.sel{background:linear-gradient(180deg,var(--red-hi),var(--red-lo));color:#fff}
+.m{border-radius:18px;background:linear-gradient(180deg,#1b2a5c,#142048);border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.m.me{background:linear-gradient(180deg,var(--a-hi),var(--a-lo));border-color:rgba(255,255,255,.18)}
+.m.s{background:none;border:0;box-shadow:none}
+#bar{align-items:stretch;gap:10px}
+#call,#snd,#fv{width:56px;padding:0;display:grid;place-items:center}
+#ptt{min-height:84px;display:flex;align-items:center;justify-content:center;gap:10px;line-height:1.2;text-align:center;font-size:17px;font-weight:700;border-radius:26px;border:1.5px solid var(--a-hi);background:radial-gradient(120% 140% at 50% 0%,#1e3a8a 0%,#0d1630 70%);box-shadow:0 0 0 6px rgba(47,107,255,.08),0 12px 32px rgba(47,107,255,.28)}
+#ptt::before{content:"";flex:none;width:30px;height:30px;background:currentColor;-webkit-mask:var(--mic) center/contain no-repeat;mask:var(--mic) center/contain no-repeat}
+#ptt.tx{background:linear-gradient(180deg,var(--red-hi),var(--red-lo));border-color:#ff8c98;animation:ltPulse 1.2s infinite}
+#ptt:disabled{opacity:.5;box-shadow:none;border-color:var(--line)}
+@keyframes ltPulse{0%{box-shadow:0 0 0 0 rgba(255,77,94,.55)}100%{box-shadow:0 0 0 16px rgba(255,77,94,0)}}
+/* SOS: identidade vermelha própria; o clique segurado de 1,2 s do app continua sendo a confirmação */
+#sos{position:relative;overflow:hidden;width:76px;padding:0;font-size:0;background:linear-gradient(180deg,var(--red-hi),var(--red-lo));border:1px solid rgba(255,255,255,.25);box-shadow:0 8px 22px rgba(255,77,94,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+#sos::after{content:"SOS";position:relative;font-size:16px;font-weight:800;letter-spacing:.06em;color:#fff}
+#sos::before{content:"";position:absolute;inset:0;background:rgba(255,255,255,.38);transform:scaleX(0);transform-origin:left;transition:transform .15s}
+#sos:active::before{transform:scaleX(1);transition:transform 1.2s linear}
+
+/* ---------- Janela (modal) ---------- */
+#modal{background:rgba(2,6,18,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#modal>div{background:linear-gradient(180deg,#16224a,#0d1630);border:1px solid var(--line);box-shadow:var(--sh)}
+
+@media (prefers-reduced-motion:reduce){button,.ck input,.ck input::after{transition:none}#ptt.tx{animation:none}}
+</style>
+
+<script id="lt-theme-js">
+/* Camada visual: troca ícones e reorganiza os Ajustes em cartões.
+   Os elementos originais (ids, eventos) são apenas MOVIDOS, nunca recriados. */
+(function(){
+'use strict';
+var D=document;
+function $(i){return D.getElementById(i)}
+var P={
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  dev:'<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  map:'<path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/>',
+  cfg:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  send:'<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/>',
+  star:'<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  home:'<path d="M3 11 12 3l9 8v10H3z"/><path d="M9 21v-6h6v6"/>',
+  vol:'<path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  screen:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>'
+};
+function svg(k){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+P[k]+'</svg>'}
+function ico(k){var s=D.createElement('span');s.className='ico';s.innerHTML=svg(k);return s}
+
+/* 1) Barra de navegação com ícones vetoriais */
+var N={chat:'Conversas',dev:'Dispositivos',map:'Mapa',cfg:'Ajustes'};
+var tabs=D.querySelectorAll('nav button[data-v]');
+tabs.forEach(function(b){
+  var k=b.dataset.v;
+  b.textContent='';
+  b.insertAdjacentHTML('afterbegin',svg(k));
+  var s=D.createElement('span');s.textContent=N[k];b.appendChild(s);
+  b.setAttribute('aria-label',N[k]);
+  if(b.classList.contains('sel'))b.setAttribute('aria-current','page');
+  b.addEventListener('click',function(){
+    tabs.forEach(function(x){x.removeAttribute('aria-current')});
+    b.setAttribute('aria-current','page');
+  });
+});
+
+/* 2) Botões de ícone (sem emoji) */
+function ib(id,k,label){var e=$(id);if(!e)return;e.innerHTML=svg(k);e.setAttribute('aria-label',label)}
+ib('call','bell','Chamar atenção de todos');
+ib('snd','send','Enviar mensagem');
+ib('fv','star','Mostrar só favoritas');
+var sos=$('sos');if(sos)sos.setAttribute('aria-label','SOS: segure por 1 segundo para enviar');
+
+/* 3) Ajustes em cartões */
+var cfg=$('v-cfg');
+if(cfg&&!cfg.querySelector('.lt-card')&&$('cn')&&$('rn')&&$('pf')&&$('o1')&&$('o2')&&$('o3')){
+  var field=function(id,icon){
+    var el=$(id),lb=el.previousElementSibling,w=D.createElement('div');
+    w.className='fld';lb.insertBefore(ico(icon),lb.firstChild);w.appendChild(lb);w.appendChild(el);return w;
+  };
+  var tog=function(id,icon){
+    var lb=$(id).parentNode,t=lb.lastChild;
+    if(t&&t.nodeType===3){var s=D.createElement('span');s.textContent=t.textContent;lb.replaceChild(s,t)}
+    lb.insertBefore(ico(icon),lb.firstChild);return lb;
+  };
+  var card=function(title){var c=D.createElement('div');c.className='lt-card';var h=D.createElement('h3');h.textContent=title;c.appendChild(h);return c};
+  var info=cfg.querySelector('p.sm');
+
+  var prof=D.createElement('div');prof.className='lt-card';
+  prof.innerHTML='<div class="prof"><div class="av" id="ltAv" aria-hidden="true"></div><div><b id="ltPn"></b><small><i class="dot" id="ltDot"></i><span id="ltSt"></span></small></div></div>';
+
+  var c1=card('Perfil');
+  c1.appendChild(field('cn','user'));c1.appendChild(field('rn','home'));c1.appendChild(field('pf','cfg'));
+
+  var c2=card('Conexão e áudio');
+  c2.appendChild(tog('o1','vol'));c2.appendChild(tog('o2','screen'));c2.appendChild(tog('o3','pulse'));
+
+  var c4=null;
+  if($('o4')&&$('vd')){c4=card('Botões de volume');c4.appendChild(tog('o4','vol'));c4.appendChild(field('vd','vol'))}
+
+  var c3=card('Rede');
+  var chip=D.createElement('span');chip.className='chip';chip.textContent='WebRTC · criptografado';
+  c3.appendChild(chip);if(info)c3.appendChild(info);
+
+  /* qualquer outro controle que já estivesse nos Ajustes (ex.: foto de perfil) vai para o cartão do perfil */
+  Array.prototype.slice.call(cfg.children).forEach(function(n){if(n!==info&&!n.classList.contains('lt-card')&&n.nodeType===1)c1.insertBefore(n,c1.children[1]||null)});
+  cfg.appendChild(prof);cfg.appendChild(c1);cfg.appendChild(c2);if(c4)cfg.appendChild(c4);cfg.appendChild(c3);
+
+  /* Cabeçalho do perfil: só dados reais (nome digitado, estado da rede). Não há foto no app: usa a inicial. */
+  var sync=function(){
+    var n=(($('cn').value)||localStorage.lt_name||'').trim();
+    $('ltAv').textContent=n.charAt(0)||'?';
+    $('ltPn').textContent=n||'Seu nome';
+    var hd=$('hd')?$('hd').textContent:'';
+    $('ltSt').textContent=hd||'Aguardando conexão';
+    $('ltDot').className='dot'+(hd&&hd.indexOf('Sem dispositivos')<0?' on':'');
+  };
+  ['change','input'].forEach(function(ev){$('cn').addEventListener(ev,sync);$('rn').addEventListener(ev,sync)});
+  var go=$('go');if(go)go.addEventListener('click',sync);
+  setInterval(sync,1500);sync();
+}
+})();
+</script>
+
+<!-- ===================== LocalTalk · Redesign · PARTE 2 =====================
+     Layout das abas como nas imagens: cabeçalhos, Dispositivos, Conversas (dock de falar), Mapa em tela ampla.
+     COLE ESTE BLOCO INTEIRO LOGO DEPOIS DO BLOCO DA PARTE 1 (e antes de </body>).
+     Não altera WebRTC, áudio, mensagens nem a lógica de localização/permissões. -->
+<style id="lt-layout">
+/* ---------- Cabeçalho de cada aba ---------- */
+.lt-head{display:flex;align-items:center;gap:12px;flex:none}
+.lt-head h2{flex:1;font:700 20px/1.2 system-ui,sans-serif}
+.lt-head .ico{width:40px;height:40px;border-radius:13px}
+.lt-head .ico svg.i{width:22px;height:22px}
+
+/* ---------- Botões com ícone + texto ---------- */
+.bt{display:flex;align-items:center;justify-content:center;gap:10px}
+#bi,#bj,#rc,#rj{width:100%;min-height:54px;font-size:15px}
+.lt-info{display:flex;align-items:flex-start;gap:10px;color:var(--m)}
+.lt-info .ico{width:26px;height:26px;border-radius:50%}
+.lt-info .ico svg.i{width:16px;height:16px}
+
+/* ---------- Dispositivos ---------- */
+#dl>small.sm{margin-top:8px;font-weight:700;letter-spacing:.04em;color:var(--m)}
+.it{min-height:68px}
+.it .avw{position:relative;flex:none;width:46px;height:46px}
+.av2{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:18px;background:linear-gradient(135deg,#3b7bff,#7c3aed);border:2px solid rgba(255,255,255,.12)}
+.av2.self{background:linear-gradient(135deg,#1fb86c,#0f7f4a)}
+.av2 svg.i{width:22px;height:22px}
+.it .avw i.d{position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border:2px solid #0d1630}
+.it.self{border-color:rgba(39,209,122,.4)}
+.it b{font-size:16px}
+.it button.rb{flex:none;width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center}
+.it button.rb svg.i{width:20px;height:20px}
+.it button.rb.edit{background:linear-gradient(180deg,var(--a-hi),var(--a-lo));border-color:rgba(255,255,255,.2)}
+.it button.rb.del{color:#ff9aa5}
+
+/* ---------- Conversas: busca e dock de falar ---------- */
+#q{padding-left:46px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fa0c8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center;background-size:20px}
+.lt-dock{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:24px;background:var(--card);border:1px solid var(--line);box-shadow:var(--sh)}
+#bar{justify-content:center;align-items:center;gap:22px;padding:6px 0 0}
+#call,#sos{flex:none;width:64px;height:64px;min-height:64px;border-radius:50%}
+#call{order:1}#ptt{order:2}#sos{order:3}
+#ptt{flex:none;width:104px;height:104px;min-height:104px;padding:0;border-radius:50%;font-size:0;box-shadow:0 0 0 8px rgba(47,107,255,.14),0 0 0 18px rgba(47,107,255,.07),0 14px 36px rgba(47,107,255,.45)}
+#ptt::before{width:46px;height:46px}
+#ltPttLbl{text-align:center;font-size:13px;font-weight:600;color:var(--m);min-height:18px}
+#inp{align-items:center}
+
+/* ---------- Mapa ---------- */
+.lt-hrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chip.off{color:var(--m);border-color:var(--line);background:none}
+.lt-mrow{display:flex;flex-wrap:wrap;gap:10px;flex:none}
+.lt-mrow button{flex:1 1 150px;min-height:52px;font-size:14px}
+.lt-radar.lt-none{display:none}
+.lt-mapbox{height:min(58vh,520px)!important;border-radius:22px!important;border:1px solid var(--line);box-shadow:var(--sh)}
+.lt-radar{width:100%!important;max-width:420px!important;border-radius:22px!important;border:1px solid var(--line)}
+#ml .it button,#spk .it button{width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center}
+</style>
+
+<script id="lt-layout-js">
+(function(){
+'use strict';
+var D=document;
+function $(i){return D.getElementById(i)}
+var P={
+  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  dev:'<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  map:'<path d="M9 4 3 6.5v13L9 17l6 3 6-2.5v-13L15 7 9 4z"/><path d="M9 4v13M15 7v13"/>',
+  cfg:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  minus:'<path d="M5 12h14"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.1 0l-3 3A5 5 0 0 0 11 21.1l1.7-1.7"/>',
+  qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 17v4"/>',
+  keypad:'<circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="12" cy="18" r="1.4"/><circle cx="18" cy="18" r="1.4"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  userx:'<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 8l5 5M22 8l-5 5"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  vol:'<path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  mute:'<path d="M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6"/>',
+  locate:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  pin:'<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>',
+  cube:'<path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/>'
+};
+function svg(k){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+P[k]+'</svg>'}
+function ico(k){var s=D.createElement('span');s.className='ico';s.innerHTML=svg(k);return s}
+
+/* 1) Cabeçalho em cada aba */
+[['v-chat','chat','Conversas'],['v-dev','dev','Dispositivos'],['v-map','map','Mapa'],['v-cfg','cfg','Ajustes']].forEach(function(a){
+  var s=$(a[0]);if(!s||s.querySelector('.lt-head'))return;
+  var h=D.createElement('div');h.className='lt-head';
+  var t=D.createElement('h2');t.textContent=a[2];
+  h.appendChild(ico(a[1]));h.appendChild(t);s.insertBefore(h,s.firstChild);
+});
+
+/* 2) Botões da aba Dispositivos: ícone + texto (o texto pode ser trocado pelo app; refaz o ícone) */
+function deco(btn,key){
+  if(!btn)return;
+  if(btn.firstElementChild&&btn.firstElementChild.tagName.toLowerCase()==='svg')return;
+  var txt=btn.textContent.replace(/^[^A-Za-zÀ-ÿ0-9]+/,'').trim();
+  btn.classList.add('bt');
+  btn.innerHTML=svg(key);
+  var s=D.createElement('span');s.textContent=txt;btn.appendChild(s);
+}
+[['bi','plus'],['bj','link'],['rc','qr'],['rj','keypad']].forEach(function(a){
+  var b=$(a[0]);if(!b)return;deco(b,a[1]);
+  new MutationObserver(function(){deco(b,a[1])}).observe(b,{childList:true});
+});
+var dev=$('v-dev');
+if(dev)dev.querySelectorAll('p.sm:not([id])').forEach(function(p){
+  if(p.classList.contains('lt-info'))return;
+  p.classList.add('lt-info');
+  var t=D.createElement('span');t.textContent=p.textContent;p.textContent='';
+  p.appendChild(ico('info'));p.appendChild(t);
+});
+
+/* 3) Lista de dispositivos: avatar + botões redondos (a lista é refeita pelo app a cada mudança) */
+var BI=[['✏','edit','edit','Editar apelido'],['🗑','trash','del','Apagar contato'],['🔔','bell','','Chamar este aparelho'],['🔊','vol','','Silenciar'],['🔇','mute','','Reativar som'],['✕','userx','del','Remover da rede']];
+function rows(){
+  var dl=$('dl');if(!dl)return;
+  dl.querySelectorAll('.it').forEach(function(r){
+    if(r.dataset.lt)return;r.dataset.lt='1';
+    var dot=r.querySelector('i.d'),b=r.querySelector('b'),name=b?b.textContent:'';
+    var self=/\(este aparelho\)/.test(name);
+    var w=D.createElement('div');w.className='avw';
+    var a=D.createElement('span');a.className='av2'+(self?' self':'');
+    if(self)a.innerHTML=svg('dev');
+    else a.textContent=(name.replace(/^[^A-Za-zÀ-ÿ0-9]+/,'').charAt(0)||'?').toUpperCase();
+    w.appendChild(a);if(dot)w.appendChild(dot);
+    r.insertBefore(w,r.firstChild);
+    if(self)r.classList.add('self');
+    r.querySelectorAll('button').forEach(function(btn){
+      var t=btn.textContent;
+      for(var i=0;i<BI.length;i++){
+        if(t.indexOf(BI[i][0])>-1){
+          btn.innerHTML=svg(BI[i][1]);btn.className='rb '+BI[i][2];
+          btn.setAttribute('aria-label',BI[i][3]);break;
+        }
+      }
+    });
+  });
+}
+var dl=$('dl');
+if(dl){new MutationObserver(rows).observe(dl,{childList:true});rows()}
+
+/* 4) Conversas: dock de falar (botão circular no centro, sino e SOS ao lado) */
+var chat=$('v-chat'),bar=$('bar'),inp=$('inp'),ptt=$('ptt');
+if(chat&&bar&&inp&&ptt&&!chat.querySelector('.lt-dock')){
+  var dock=D.createElement('div');dock.className='lt-dock';
+  var lbl=D.createElement('div');lbl.id='ltPttLbl';
+  dock.appendChild(bar);dock.appendChild(lbl);dock.appendChild(inp);chat.appendChild(dock);
+  var mir=function(){lbl.textContent=ptt.textContent};
+  new MutationObserver(mir).observe(ptt,{childList:true,characterData:true,subtree:true});mir();
+}
+
+/* 5) Mapa: usa os elementos que o app já cria (mapa real 3D e radar). NÃO substitui drawMap. */
+var vm=$('v-map'),cv=$('cv'),lo=$('lo'),lh=$('lh');
+if(vm&&cv&&lo&&lh&&!vm.querySelector('.lt-share')){
+  var mDiv=cv.previousElementSibling,mNote=mDiv&&mDiv.previousElementSibling,
+      mCtr=mNote&&mNote.previousElementSibling,mBtn=mCtr&&mCtr.previousElementSibling;
+  /* cartão de compartilhamento com indicador ativado/desativado */
+  var lab=lo.parentNode,t=lab.lastChild;
+  if(t&&t.nodeType===3){var sp=D.createElement('span');sp.textContent=t.textContent;lab.replaceChild(sp,t)}
+  lab.insertBefore(ico('pin'),lab.firstChild);
+  var sh=D.createElement('div');sh.className='lt-card lt-share';
+  var hr=D.createElement('div');hr.className='lt-hrow';
+  var h3=D.createElement('h3');h3.textContent='Localização';
+  var chip=D.createElement('span');chip.className='chip off';chip.textContent='Desativado';
+  hr.appendChild(h3);hr.appendChild(chip);
+  sh.appendChild(hr);sh.appendChild(lab);sh.appendChild(lh);
+  var hd=vm.querySelector('.lt-head');vm.insertBefore(sh,hd?hd.nextSibling:vm.firstChild);
+  var sync2=function(){var on=!!lo.checked;chip.textContent=on?'Ativado':'Desativado';chip.className='chip'+(on?'':' off')};
+  lo.addEventListener('change',sync2);setInterval(sync2,1500);sync2();
+  /* botões do mapa real: ícone + texto (o app troca o texto ao abrir/fechar) */
+  if(mBtn&&mCtr&&mBtn.tagName==='BUTTON'&&mCtr.tagName==='BUTTON'){
+    var row=D.createElement('div');row.className='lt-mrow';
+    var b3=mBtn.previousElementSibling,has3=b3&&b3.tagName==='BUTTON'&&/Visão/.test(b3.textContent);
+    vm.insertBefore(row,has3?b3:mBtn);
+    if(has3){row.appendChild(b3);b3.classList.remove('pri')}
+    row.appendChild(mBtn);row.appendChild(mCtr);
+    mBtn.classList.add('pri');
+    var pairs=[[mBtn,'map'],[mCtr,'locate']];if(has3)pairs.push([b3,'cube']);
+    pairs.forEach(function(a){
+      deco(a[0],a[1]);new MutationObserver(function(){deco(a[0],a[1])}).observe(a[0],{childList:true});
+    });
+    mDiv.classList.add('lt-mapbox');
+  }
+  cv.classList.add('lt-radar');
+  /* botão de copiar coordenadas na lista de aparelhos do mapa */
+  var ml=$('ml');
+  if(ml){
+    var fixml=function(){cv.classList.toggle('lt-none',!ml.querySelector('.it'));ml.querySelectorAll('.it button').forEach(function(b){
+      if(b.textContent.indexOf('📋')>-1){b.innerHTML=svg('copy');b.className='rb';b.setAttribute('aria-label','Copiar coordenadas')}})};
+    new MutationObserver(fixml).observe(ml,{childList:true});fixml();
+  }
+}
+})();
+</script>
+
 </body></html>
