@@ -300,8 +300,81 @@ static void tap(String k) {
             // nada a fazer
         }
     }
-
+    private String hostAddrJson() {
+        List<String> ips = new ArrayList<String>();
+        try {
+            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                String n = ni.getName() == null ? "" : ni.getName().toLowerCase(Locale.ROOT);
+                if (n.startsWith("rmnet") || n.startsWith("ccmni") || n.startsWith("tun")
+                        || n.startsWith("dummy")) continue;
+                for (InetAddress a : Collections.list(ni.getInetAddresses())) {
+                    if (a instanceof java.net.Inet4Address && !a.isLoopbackAddress()
+                            && a.isSiteLocalAddress()) {
+                        boolean wifi = n.startsWith("wlan") || n.startsWith("ap")
+                                || n.startsWith("swlan");
+                        if (wifi) ips.add(0, a.getHostAddress());
+                        else ips.add(a.getHostAddress());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // sem rede: a lista fica vazia
+        }
+        StringBuilder b = new StringBuilder("{\"port\":"
+                + (room != null ? room.httpPort : RoomCore.HTTP_PORT) + ",\"ips\":[");
+        for (int i = 0; i < ips.size(); i++) {
+            if (i > 0) b.append(',');
+            b.append(RoomCore.quote(ips.get(i)));
+        }
+        return b.append("]}").toString();
+    }
     private class Bridge {
+                @JavascriptInterface
+        public String roomAddr() {
+            return hostAddrJson();
+        }
+
+        @JavascriptInterface
+        public void share(final String text) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Intent i = new Intent(Intent.ACTION_SEND);
+                    i.setType("text/plain");
+                    i.putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(Intent.createChooser(i, "Enviar convite"));
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void roomFetchAt(final String id, final String code, final String host,
+                final String port) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        RoomCore.Found f = null;
+                        try {
+                            int p = Integer.parseInt(port);
+                            if (host.matches("[0-9]{1,3}(\\.[0-9]{1,3}){3}")
+                                    && p >= 1024 && p <= 65535) {
+                                f = RoomCore.fetchOffer(code, host, p, null, 0, 2500);
+                            }
+                        } catch (Exception e) {
+                            f = null;
+                        }
+                        if (f == null) f = RoomCore.fetchOffer(code, null, 0, null, 0, 2500);
+                        done(id, true, "{\"offer\":" + RoomCore.quote(f.offer) + ",\"name\":"
+                                + RoomCore.quote(f.name == null ? "" : f.name) + ",\"host\":"
+                                + RoomCore.quote(f.host) + ",\"port\":" + f.port + "}");
+                    } catch (Exception e) {
+                        done(id, false, String.valueOf(e.getMessage()));
+                    }
+                }
+            }).start();
+        }
                 @JavascriptInterface
         public void saveFile(final String name, final String mime, final String b64) {
             new Thread(new Runnable() {
