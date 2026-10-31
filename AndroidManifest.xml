@@ -18,7 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
-        android:theme="@android:style/theme="@style/LTTheme">
+        android:theme="@style/LTTheme">
         <activity
             android:name=".MainActivity"
             android:exported="true"
