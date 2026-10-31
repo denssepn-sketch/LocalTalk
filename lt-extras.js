@@ -69,4 +69,6 @@ else if(m.t=='msg'&&(m.img||m.rp)){const h=hist.find(x=>x.id==m.id);if(h&&!h.img
 if(typeof m.img=='string'&&m.img.startsWith('data:image/jpeg')&&m.img.length<150000)h.img=m.img;
 if(m.rp&&typeof m.rp.n=='string')h.rp={n:m.rp.n.slice(0,20),x:String(m.rp.x||'').slice(0,60)};save();render()}}
 return r};
+  // Foto de cada pessoa para o mapa
+window.ltAvatar=id=>id==ID?PIC:((peers[id]&&peers[id].pic)||'');
 })();
